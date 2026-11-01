@@ -20,13 +20,16 @@ _PROVIDER_ALIASES = {
     "google": "google",
     "gemini": "google",
     "google-gemini": "google",
+    "ollama": "ollama"
 }
 # Our provider ids -> LangChain's init_chat_model provider ids.
 _LANGCHAIN_PROVIDERS = {
     "openai": "openai",
     "anthropic": "anthropic",
     "google": "google_genai",
+    "ollama": "ollama"
 }
+
 _SPEC = re.compile(r"^([A-Za-z0-9-]+)[:/](.+)$")
 
 

@@ -1,55 +1,24 @@
-"""
-This is the main entry point for the agent.
-It defines the workflow graph, state, tools, nodes and edges.
-"""
-
-from copilotkit import CopilotKitMiddleware, StateStreamingMiddleware, StateItem
+from copilotkit import CopilotKitMiddleware
 from langchain.agents import create_agent
-
-# Data & state tools
-from src.query import query_data
-from src.todos import AgentState, todo_tools
-
-# A2UI tools
-from src.a2ui_dynamic_schema import generate_a2ui
-from src.a2ui_fixed_schema import search_flights
-
 from src.model import create_chat_model
+from src.rag import retrieve_documents, list_bucket_documents
 
-# COPILOTKIT_AGENT_MODEL (e.g. "anthropic:claude-sonnet-4-5") overrides this and
-# every other model site in the agent; unset, this site uses gpt-5.4-mini.
 model = create_chat_model(
-    "openai:gpt-5.4-mini", model_kwargs={"parallel_tool_calls": False}
+    "ollama:qwen3:1.7b", model_kwargs={"parallel_tool_calls": False}
 )
 
 SYSTEM_PROMPT = """
-        You are a polished, professional demo assistant. Keep responses to 1-2 sentences.
-
-        Tool guidance:
-        - Flights: call search_flights to show flight cards with a pre-built schema.
-        - Dashboards & rich UI: call generate_a2ui to create dashboard UIs with metrics,
-          charts, tables, and cards. It handles rendering automatically.
-        - Charts: call query_data first, then render with the chart component.
-        - Todos: enable app mode first, then manage todos.
-        - Diagrams (Excalidraw): call `create_view` ONCE with 3-5 shapes and arrows.
-          Give each shape and arrow a unique string `id`, and every shape a plain `label`
-          with text. Connect shapes with arrows. Include ONE `cameraUpdate` at the END of
-          the elements array, do not call `read_me` or refine the diagram, then reply with
-          ONE short sentence describing what you drew.
-        - A2UI actions: when you see a log_a2ui_event result (e.g. "view_details"),
-          respond with a brief confirmation. The UI already updated on the frontend.
-    """
+You are an expert documentation assistant using Retrieval-Augmented Generation (RAG).
+The user uploads reference files to their "Knowledge Bucket".
+- When asked what files exist, call `list_bucket_documents`.
+- When asked questions about facts or instructions, call `retrieve_documents` to get context from Chroma.
+- Ground your answers strictly on the retrieved context and cite sources (e.g. `[Source: filename (chunk X)]`).
+"""
 
 agent = create_agent(
     model=model,
-    tools=[query_data, *todo_tools, generate_a2ui, search_flights],
-    middleware=[
-        CopilotKitMiddleware(),
-        StateStreamingMiddleware(
-            StateItem(state_key="todos", tool="manage_todos", tool_argument="todos")
-        ),
-    ],
-    state_schema=AgentState,
+    tools=[retrieve_documents, list_bucket_documents],
+    middleware=[CopilotKitMiddleware()],
     system_prompt=SYSTEM_PROMPT,
 )
 
