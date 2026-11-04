@@ -11,7 +11,7 @@ interface ExampleLayoutProps {
 }
 
 export function ExampleLayout({ chatContent, appContent }: ExampleLayoutProps) {
-  const [mode, setMode] = useState<"chat" | "app">("chat");
+  const [mode, setMode] = useState<"chat" | "app">("app");
 
   useFrontendTool({
     name: "enableAppMode",
@@ -37,8 +37,8 @@ export function ExampleLayout({ chatContent, appContent }: ExampleLayoutProps) {
       {/* Chat Content */}
       <div
         className={`max-h-full flex flex-col dark:bg-stone-950 ${mode === "app"
-            ? "w-1/2 px-6 max-lg:hidden" // Half/half with the canvas; hidden on mobile in app mode
-            : "flex-1 max-lg:px-4"
+          ? "w-1/2 px-6 max-lg:hidden" // Half/half with the canvas; hidden on mobile in app mode
+          : "flex-1 max-lg:px-4"
           }`}
       >
         {/* Clear the threads drawer's floating launcher/collapsed cluster, which
@@ -64,8 +64,8 @@ export function ExampleLayout({ chatContent, appContent }: ExampleLayoutProps) {
       {/* State Panel */}
       <div
         className={`h-full overflow-hidden ${mode === "app"
-            ? "w-1/2 max-lg:w-full border-l border-[var(--border)] max-lg:border-l-0" // Half/half with the chat; full width on mobile
-            : "w-0 border-l-0"
+          ? "w-1/2 max-lg:w-full border-l border-[var(--border)] max-lg:border-l-0" // Half/half with the chat; full width on mobile
+          : "w-0 border-l-0"
           }`}
       >
         {/*

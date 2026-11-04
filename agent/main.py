@@ -1,25 +1,43 @@
-from copilotkit import CopilotKitMiddleware
-from langchain.agents import create_agent
-from src.model import create_chat_model
-from src.rag import retrieve_documents, list_bucket_documents
+from langgraph.graph import StateGraph, START, END
+from src.state import GraphState
+from src.nodes.retrieve import retrieve_node
+from src.nodes.grade_documents import grade_documents_node
+from src.nodes.rewrite_query import rewrite_query_node
+from src.nodes.generate import generate_node
+from src.nodes.direct_chat import direct_chat_node
+from src.edges import decide_to_generate, route_question
 
-model = create_chat_model(
-    "ollama:qwen3:1.7b", model_kwargs={"parallel_tool_calls": False}
+workflow = StateGraph(GraphState)
+
+workflow.add_node("retrieve", retrieve_node)
+workflow.add_node("grade_documents", grade_documents_node)
+workflow.add_node("rewrite_query", rewrite_query_node)
+workflow.add_node("generate", generate_node)
+workflow.add_node("direct_chat", direct_chat_node)
+
+workflow.add_conditional_edges(
+    START,
+    route_question,
+    {
+        "vectorstore": "retrieve",
+        "general_chat": "direct_chat",
+    },
 )
 
-SYSTEM_PROMPT = """
-You are an expert documentation assistant using Retrieval-Augmented Generation (RAG).
-The user uploads reference files to their "Knowledge Bucket".
-- When asked what files exist, call `list_bucket_documents`.
-- When asked questions about facts or instructions, call `retrieve_documents` to get context from Chroma.
-- Ground your answers strictly on the retrieved context and cite sources (e.g. `[Source: filename (chunk X)]`).
-"""
+workflow.add_edge("retrieve", "grade_documents")
 
-agent = create_agent(
-    model=model,
-    tools=[retrieve_documents, list_bucket_documents],
-    middleware=[CopilotKitMiddleware()],
-    system_prompt=SYSTEM_PROMPT,
+workflow.add_conditional_edges(
+    "grade_documents",
+    decide_to_generate,
+    {
+        "generate": "generate",
+        "rewrite_query": "rewrite_query",
+    },
 )
 
-graph = agent
+workflow.add_edge("rewrite_query", "retrieve")
+workflow.add_edge("generate", END)
+
+workflow.add_edge("direct_chat", END)
+
+graph = workflow.compile()

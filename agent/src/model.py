@@ -1,61 +1,48 @@
-"""Build the agent's chat model from ``COPILOTKIT_AGENT_MODEL``.
-
-``COPILOTKIT_AGENT_MODEL=<provider>:<model>`` (or ``<provider>/<model>``)
-overrides EVERY model site in this agent. When it is unset, each site falls
-back to its own default. Providers: ``openai``, ``anthropic``, ``google``
-(``gemini`` and ``google-gemini`` are aliases of ``google``). An
-OpenAI-compatible provider is ``openai:<its model id>`` plus
-``OPENAI_BASE_URL``, which the OpenAI client reads itself.
-"""
+"""Centralized model factory for Ollama (Local & Cloud)."""
 
 import os
-import re
-
-from langchain.chat_models import init_chat_model
+from langchain_ollama import ChatOllama
 from langchain_core.language_models.chat_models import BaseChatModel
 
-_PROVIDER_ALIASES = {
-    "openai": "openai",
-    "anthropic": "anthropic",
-    "google": "google",
-    "gemini": "google",
-    "google-gemini": "google",
-    "ollama": "ollama"
-}
-# Our provider ids -> LangChain's init_chat_model provider ids.
-_LANGCHAIN_PROVIDERS = {
-    "openai": "openai",
-    "anthropic": "anthropic",
-    "google": "google_genai",
-    "ollama": "ollama"
-}
 
-_SPEC = re.compile(r"^([A-Za-z0-9-]+)[:/](.+)$")
-
-
-def parse_agent_model(value: str) -> tuple[str, str]:
-    """Split ``<provider>:<model>`` into (provider, model); the model id is kept unchanged."""
-    match = _SPEC.match(value.strip())
-    provider = match and _PROVIDER_ALIASES.get(match.group(1).lower())
-    if not match or not provider:
-        raise ValueError(
-            f'COPILOTKIT_AGENT_MODEL="{value}" is not <provider>:<model> '
-            "with provider openai, anthropic or google"
-        )
-    return provider, match.group(2)
-
-
-def create_chat_model(default_spec: str, **openai_kwargs) -> BaseChatModel:
-    """Build this site's chat model.
-
-    Args:
-        default_spec: This site's default, e.g. ``"openai:gpt-5.4"``.
-        **openai_kwargs: Extra ChatOpenAI options, applied only for OpenAI.
+def get_model(temperature: float = 0.0, **kwargs) -> BaseChatModel:
+    """Builds and returns an Ollama ChatModel instance.
+    
+    Reads from environment variables:
+    - Model: COPILOTKIT_AGENT_MODEL or OLLAMA_MODEL (default: 'qwen3:1.7b')
+    - Host:  OLLAMA_BASE_URL or OLLAMA_HOST (default: 'http://localhost:11434')
+    - Auth:  OLLAMA_API_KEY (optional, used when Ollama Cloud is behind an auth proxy)
     """
-    provider, model = parse_agent_model(
-        (os.getenv("COPILOTKIT_AGENT_MODEL") or "").strip() or default_spec
+    # 1. Resolve model name (handles both 'ollama:qwen3:1.7b' and 'qwen3:1.7b')
+    raw_model = (
+        os.getenv("COPILOTKIT_AGENT_MODEL")
+        or os.getenv("OLLAMA_MODEL")
+        or "qwen3:1.7b"
+    ).strip()
+    model_name = raw_model.split(":", 1)[1] if raw_model.startswith("ollama:") else raw_model
+
+    # 2. Resolve base URL (Local default vs Cloud endpoint)
+    base_url = (
+        os.getenv("OLLAMA_BASE_URL")
+        or os.getenv("OLLAMA_HOST")
+        or os.getenv("OPENAI_BASE_URL", "http://localhost:11434").replace("/v1", "")
+    ).rstrip("/")
+
+    # 3. Optional auth header for Cloud Ollama instances
+    api_key = os.getenv("OLLAMA_API_KEY")
+    client_kwargs = {}
+    if api_key:
+        client_kwargs["headers"] = {"Authorization": f"Bearer {api_key}"}
+
+    return ChatOllama(
+        model=model_name,
+        base_url=base_url,
+        temperature=temperature,
+        client_kwargs=client_kwargs or None,
+        **kwargs,
     )
-    kwargs = openai_kwargs if provider == "openai" else {}
-    return init_chat_model(
-        model, model_provider=_LANGCHAIN_PROVIDERS[provider], **kwargs
-    )
+
+
+def create_chat_model(default_spec: str = "qwen3:1.7b", **kwargs) -> BaseChatModel:
+    """Backward-compatible wrapper for existing starter code."""
+    return get_model(**kwargs)

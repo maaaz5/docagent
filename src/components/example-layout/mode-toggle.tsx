@@ -9,8 +9,8 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
       <button
         onClick={() => onModeChange("chat")}
         className={`px-4 py-1.5 rounded-[2px] text-[13px] leading-[20px] font-medium transition-all cursor-pointer ${mode === "chat"
-            ? "bg-[var(--card)] text-[var(--card-foreground)] shadow-sm"
-            : "text-[var(--muted-foreground)]"
+          ? "bg-[var(--card)] text-[var(--card-foreground)] shadow-sm"
+          : "text-[var(--muted-foreground)]"
           }`}
       >
         Chat
@@ -18,11 +18,11 @@ export function ModeToggle({ mode, onModeChange }: ModeToggleProps) {
       <button
         onClick={() => onModeChange("app")}
         className={`px-4 py-1.5 rounded-[2px] text-[13px] leading-[20px] font-medium transition-all cursor-pointer ${mode === "app"
-            ? "bg-[var(--card)] text-[var(--card-foreground)] shadow-sm"
-            : "text-[var(--muted-foreground)]"
+          ? "bg-[var(--card)] text-[var(--card-foreground)] shadow-sm"
+          : "text-[var(--muted-foreground)]"
           }`}
       >
-        App
+        Bucket
       </button>
     </div>
   );

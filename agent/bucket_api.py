@@ -41,7 +41,7 @@ async def get_bucket_documents():
     raise HTTPException(status_code=500, detail=str(e)) 
 
 
-@app.post("api/bucket/upload")
+@app.post("/api/bucket/upload")
 async def upload_documents(files: list[UploadFile] = File(...)):
   """Upload documents, extract text, chunk, and embed into ChromaDB."""
   if not files:
