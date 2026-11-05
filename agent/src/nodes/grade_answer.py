@@ -57,6 +57,22 @@ def grade_generation_node(state: GraphState):
 
   print(f"--- [GRADE RESULTS] Grounded: {is_grounded}, Answers Question: {addresses_question} ---")
 
-  # Store result in state for conditional routing
-  return {"generation": generation}
+  loop_step = state.get("loop_step", 0)
+
+  if is_grounded and addresses_question:
+    print("--- [DECISION] Grounded and addresses question -> END ---")
+    return "useful"
+
+  if loop_step >= 2:
+    print("--- [DECISION] Max retries reached -> END ---")
+    return "useful"
+
+  if not is_grounded:
+    print("--- [DECISION] Hallucination detected -> REGENERATE ---")
+    return "not_grounded"
+
+  print("--- [DECISION] Does not address question -> REWRITE QUERY ---")
+  return "not_useful"
+  
+  # return {"generation": generation}
 

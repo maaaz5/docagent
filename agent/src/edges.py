@@ -14,7 +14,6 @@ class RouteQuery(BaseModel):
     )
   )
 
-
 def route_question(state: GraphState) -> str:
   """
   Determines whether to route the question to Chroma retrieval or direct chat using the LLM.
