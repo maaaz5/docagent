@@ -12,6 +12,8 @@ import {
 
 import styles from "./page.module.css";
 
+import { ThreadsSidebar } from "@/components/threads-sidebar";
+
 export default function HomePage() {
   useGenerativeUIExamples();
   useExampleSuggestions();
@@ -31,7 +33,8 @@ export default function HomePage() {
     <CopilotChatConfigurationProvider agentId="default">
       <div className={styles.layout}>
         {/* SDK threads drawer (replaces the hand-rolled fork). License-gated: the locked view's Upgrade CTA opens the Intelligence docs by default. */}
-        <CopilotThreadsDrawer agentId="default" />
+        {/* <CopilotThreadsDrawer agentId="default" /> */}
+        <ThreadsSidebar />
         <div className={styles.mainPanel}>
           <ExampleLayout
             chatContent={

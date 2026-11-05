@@ -60,10 +60,14 @@ Instructions:
     decision = router.invoke(prompt)
     dest = decision.datasource
   except Exception as e:
-    print(f"--- [ROUTER] Router exception: {e} -> fallback to vectorstore ---")
-    dest = "vectorstore"
+    err_str = str(e).lower()
+    if "general_chat" in err_str:
+      dest = "general_chat"
+    else:
+      dest = "vectorstore"
 
-  print(f"--- [ROUTER] Routing to '{dest}' ---")
+  print(f"--- [ROUTER] Recovered routing to '{dest}' ---")
+
   return dest
 
 

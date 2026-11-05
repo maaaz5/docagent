@@ -1,5 +1,5 @@
 from langgraph.graph import StateGraph, START, END
-from agent.src.nodes.grade_answer import grade_generation_node
+from src.nodes.grade_answer import grade_generation_node
 from src.state import GraphState
 from src.nodes.retrieve import retrieve_node
 from src.nodes.grade_documents import grade_documents_node
@@ -47,8 +47,6 @@ workflow.add_conditional_edges(
         "not_grounded": "generate",
     },
 )
-
-workflow.add_edge("generate", END)
 
 workflow.add_edge("direct_chat", END)
 

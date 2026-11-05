@@ -3,7 +3,17 @@ import shutil
 from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import uvicorn
+from typing import Optional
+
+from src.db import (
+    list_threads as db_list_threads,
+    upsert_thread as db_upsert_thread,
+    delete_thread as db_delete_thread,
+    get_messages as db_get_messages,
+    add_message as db_add_message,
+)
 
 from src.rag import index_file, list_documents, delete_document
 
@@ -22,6 +32,16 @@ app.add_middleware(
   allow_methods=["*"],
   allow_headers=["*"],
 )
+
+
+class ThreadCreate(BaseModel):
+  id: str
+  title: Optional[str] = "New Conversation"
+
+class MessageCreate(BaseModel):
+  role: str
+  content: str
+
 
 UPLOADS_DIR = Path(__file__).parent / "uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
@@ -71,7 +91,27 @@ async def remove_document(filename: str):
   except Exception as e:
     raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/threads")
+async def get_threads():
+  return {"threads": db_list_threads()}
+
+@app.post("/api/threads")
+async def create_thread(payload: ThreadCreate):
+  return db_upsert_thread(payload.id, payload.title)
+
+@app.delete("/api/threads/{thread_id}")
+async def remove_thread(thread_id: str):
+  return {"success": db_delete_thread(thread_id), "id": thread_id}
+
+@app.get("/api/threads/{thread_id}/messages")
+async def get_messages(thread_id: str):
+  return {"messages": db_get_messages(thread_id)}
+
+@app.post("/api/threads/{thread_id}/messages")
+async def append_message(thread_id: str, payload: MessageCreate):
+  return db_add_message(thread_id, payload.role, payload.content)
+
       
 if __name__ == "__main__":
-    port = int(os.getenv("BUCKET_API_PORT", "8000"))
-    uvicorn.run("bucket_api:app", host="0.0.0.0", port=port, reload=True)
+  port = int(os.getenv("BUCKET_API_PORT", "8000"))
+  uvicorn.run("bucket_api:app", host="0.0.0.0", port=port, reload=True)

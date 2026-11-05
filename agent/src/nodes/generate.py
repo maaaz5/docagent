@@ -1,9 +1,11 @@
+from annotated_types import doc
 from langchain_core.messages import HumanMessage, AIMessage
 from src.state import GraphState
 from src.model import get_model
+from src.db import add_message
+from langchain_core.runnables import RunnableConfig
 
-
-def generate_node(state: GraphState):
+def generate_node(state: GraphState, config: RunnableConfig = None):
   """
   Generates answer using the filtered relevant documents.
   """
@@ -35,9 +37,15 @@ Question:
 
   response = model.invoke([HumanMessage(content=prompt)])
 
+  if config:
+    thread_id = config.get("configurable", {}).get("thread_id")
+    if thread_id:
+      add_message(thread_id, "user", question)
+      add_message(thread_id, "assistant", response.content)
+
   return {
       "generation": response.content,
       "messages": [AIMessage(content=response.content)],
       "loop_step": 0,
-      "documents": [],
+      "documents": documents,
   }
