@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Plus, PanelLeft } from "lucide-react";
 import { useCopilotChatConfiguration } from "@copilotkit/react-core/v2";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { ThreadItem as ThreadItemType } from "./types";
 import { ThreadsHeader } from "./threads-header";
 import { ThreadsList } from "./threads-list";
@@ -33,7 +35,7 @@ export function ThreadsSidebar() {
 
   useEffect(() => {
     fetchThreads();
-    const interval = setInterval(fetchThreads, 6000);
+    const interval = setInterval(fetchThreads, 2500);
     return () => clearInterval(interval);
   }, [fetchThreads]);
 
@@ -42,63 +44,67 @@ export function ThreadsSidebar() {
   };
 
   const handleNewThread = () => {
-    // Standard RFC-compliant UUID accepted by LangGraph
-    const newId = crypto.randomUUID();
-    chatConfig?.setActiveThreadId(newId, { explicit: true });
+    chatConfig?.startNewThread();
   };
 
   const handleDeleteThread = async (threadId: string) => {
     try {
       await fetch(`${BUCKET_API}/api/threads/${threadId}`, { method: "DELETE" });
       setThreads((prev) => prev.filter((t) => t.id !== threadId));
-      if (activeThreadId === threadId) {
-        handleNewThread();
-      }
+      if (activeThreadId === threadId) handleNewThread();
     } catch (err) {
       console.error("Failed to delete thread:", err);
     }
   };
 
+  /* ── Collapsed state ── */
   if (isCollapsed) {
     return (
-      <div className="w-12 h-full border-r border-[var(--border)] bg-stone-50/50 dark:bg-stone-950/40 flex flex-col items-center py-4 gap-3 shrink-0">
-        <button
+      <div className="flex h-full w-12 shrink-0 flex-col items-center border-r border-[var(--border)] bg-[var(--background)] py-4 gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => setIsCollapsed(false)}
-          className="p-2 rounded-lg hover:bg-stone-200 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 transition-colors"
           title="Expand sidebar"
+          className="h-8 w-8"
         >
-          <PanelLeft className="w-4 h-4" />
-        </button>
-        <button
+          <PanelLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          size="icon"
           onClick={handleNewThread}
-          className="p-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors"
           title="New thread"
+          className="h-8 w-8"
         >
-          <Plus className="w-4 h-4" />
-        </button>
+          <Plus className="h-4 w-4" />
+        </Button>
       </div>
     );
   }
 
+  /* ── Expanded state ── */
   return (
-    <div className="w-80 h-full border-r border-[var(--border)] bg-stone-50/50 dark:bg-stone-950/40 flex flex-col shrink-0">
+    <div className="flex h-full w-72 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--background)]">
+      {/* Header */}
       <ThreadsHeader
         loading={loading}
         onRefresh={fetchThreads}
         onCollapse={() => setIsCollapsed(true)}
       />
 
-      {/* New Thread CTA */}
-      <div className="p-3">
-        <button
+      {/* New Thread button */}
+      <div className="px-3 pb-2">
+        <Button
           onClick={handleNewThread}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors"
+          className="w-full gap-2"
+          size="sm"
         >
-          <Plus className="w-4 h-4" />
-          <span>New Thread</span>
-        </button>
+          <Plus className="h-3.5 w-3.5" />
+          New Thread
+        </Button>
       </div>
 
+      {/* Thread list */}
       <ThreadsList
         threads={threads}
         activeThreadId={activeThreadId}
@@ -106,7 +112,11 @@ export function ThreadsSidebar() {
         onDelete={handleDeleteThread}
       />
 
-
+      {/* Footer */}
+      <Separator />
+      <p className="px-4 py-2.5 text-center text-[10px] text-[var(--muted-foreground)]">
+        SQLite · local persistence
+      </p>
     </div>
   );
 }

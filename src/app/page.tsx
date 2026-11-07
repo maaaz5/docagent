@@ -7,7 +7,6 @@ import { useGenerativeUIExamples, useExampleSuggestions } from "@/hooks";
 import {
   CopilotChat,
   CopilotChatConfigurationProvider,
-  CopilotThreadsDrawer,
 } from "@copilotkit/react-core/v2";
 
 import styles from "./page.module.css";
@@ -32,8 +31,7 @@ export default function HomePage() {
     */
     <CopilotChatConfigurationProvider agentId="default">
       <div className={styles.layout}>
-        {/* SDK threads drawer (replaces the hand-rolled fork). License-gated: the locked view's Upgrade CTA opens the Intelligence docs by default. */}
-        {/* <CopilotThreadsDrawer agentId="default" /> */}
+        {/* Open-source SQLite Threads Sidebar */}
         <ThreadsSidebar />
         <div className={styles.mainPanel}>
           <ExampleLayout

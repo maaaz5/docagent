@@ -2,10 +2,10 @@ import {
   CopilotRuntime,
   CopilotKitIntelligence,
   createCopilotEndpoint,
-  InMemoryAgentRunner,
 } from "@copilotkit/runtime/v2";
 import { handle } from "hono/vercel";
 import { createDefaultAgent } from "@/agent";
+import { SQLiteAgentRunner } from "@/runner";
 
 const defaultAgent = createDefaultAgent();
 
@@ -29,7 +29,7 @@ const runtime = new CopilotRuntime({
         // an unknown id (like this literal) can make thread operations fail.
         identifyUser: () => ({ id: "demo-user", name: "Demo User" }),
       }
-    : { runner: new InMemoryAgentRunner() }),
+    : { runner: new SQLiteAgentRunner() }),
   // --- /copilotkit:intelligence ---
   openGenerativeUI: true,
   a2ui: {

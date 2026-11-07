@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useRef } from "react";
-import { UploadCloud } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { UploadCloud, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface UploadZoneProps {
   uploading: boolean;
@@ -10,27 +11,32 @@ interface UploadZoneProps {
 
 export function UploadZone({ uploading, onFilesSelected }: UploadZoneProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
+    setIsDragging(false);
     onFilesSelected(e.dataTransfer.files);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFilesSelected(e.target.files);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
     <label
-      onDragOver={(e) => e.preventDefault()}
+      onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+      onDragLeave={() => setIsDragging(false)}
       onDrop={handleDrop}
-      className={`flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-6 transition cursor-pointer ${uploading
-          ? "border-indigo-500/60 bg-indigo-500/5 cursor-wait"
-          : "border-stone-700/80 hover:border-indigo-500/50 hover:bg-stone-800/30 bg-stone-900/30"
-        }`}
+      className={cn(
+        "flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 text-center transition-colors cursor-pointer",
+        uploading
+          ? "cursor-wait border-[var(--ring)] bg-[var(--accent)]"
+          : isDragging
+          ? "border-[var(--ring)] bg-[var(--accent)]"
+          : "border-[var(--border)] hover:border-[var(--ring)] hover:bg-[var(--accent)]"
+      )}
     >
       <input
         ref={fileInputRef}
@@ -42,16 +48,22 @@ export function UploadZone({ uploading, onFilesSelected }: UploadZoneProps) {
         onChange={handleChange}
       />
 
-      <div className="p-3 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-3">
-        <UploadCloud className={`w-6 h-6 ${uploading ? "animate-bounce" : ""}`} />
+      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--card)]">
+        {uploading ? (
+          <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+        ) : (
+          <UploadCloud className="h-5 w-5 text-[var(--muted-foreground)]" />
+        )}
       </div>
 
-      <p className="text-sm font-semibold text-white mb-1">
-        {uploading ? "Processing & Embedding in Chroma..." : "Upload files to Knowledge Bucket"}
-      </p>
-      <p className="text-xs text-stone-400 text-center max-w-xs">
-        Drag & drop or click to upload. Supports PDF, Markdown, TXT, CSV, JSON, and code files.
-      </p>
+      <div>
+        <p className="text-sm font-medium text-[var(--foreground)]">
+          {uploading ? "Embedding into Chroma…" : "Drop files or click to upload"}
+        </p>
+        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+          PDF, Markdown, TXT, CSV, JSON, and code files
+        </p>
+      </div>
     </label>
   );
 }

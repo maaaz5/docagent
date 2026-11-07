@@ -10,9 +10,7 @@
  * A2UI catalog: src/app/declarative-generative-ui/
  */
 import { useConfigureSuggestions } from "@copilotkit/react-core/v2";
-import showcaseConfig from "../../showcase.json";
 
-const showcase = showcaseConfig.showcase;
 export const useExampleSuggestions = () => {
   useConfigureSuggestions({
     suggestions: [
