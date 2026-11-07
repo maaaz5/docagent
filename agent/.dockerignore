@@ -1,0 +1,12 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.langgraph_api
+uploads/*
+!uploads/.gitkeep
+chroma_db
+threads.db
+

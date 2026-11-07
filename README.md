@@ -1,10 +1,37 @@
-# CopilotKit <> LangGraph Starter
+# DocAgent: Self-Hosted Knowledge Bucket & RAG Agent
 
-This is a starter template for building AI agents using [LangGraph](https://www.langchain.com/langgraph) and [CopilotKit](https://copilotkit.ai). It provides a modern Next.js application with an integrated LangGraph agent to be built on top of.
+DocAgent is a 100% open-source, self-hosted Adaptive RAG assistant built with Next.js, LangGraph, FastAPI, ChromaDB, and Ollama. It features a document Knowledge Bucket, persistent conversation threads (SQLite), and real-time streaming via CopilotKit.
 
-https://github.com/user-attachments/assets/47761912-d46a-4fb3-b9bd-cb41ddd02e34
+---
 
-## Prerequisites
+## 🐳 Quick Start with Docker (Recommended)
+
+Run the entire full-stack app (Next.js frontend + FastAPI & LangGraph backend) in one command:
+
+```bash
+# 1. Clone the repository
+git clone <your-repo-url>
+cd docagent
+
+# 2. (Optional) Configure environment
+cp .env.example .env
+
+# 3. Start everything with Docker Compose
+docker compose up -d
+```
+
+The services will be available at:
+- **Web UI:** [http://localhost:3000](http://localhost:3000)
+- **Knowledge Bucket & Threads API:** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **LangGraph Agent:** [http://localhost:8123](http://localhost:8123)
+
+ChromaDB (`agent/chroma_db`) and conversation threads (`agent/threads.db`) persist automatically to your host directory.
+
+---
+
+## 💻 Local Development Without Docker
+
+### Prerequisites
 
 - Node.js 18+
 - Python 3.12+

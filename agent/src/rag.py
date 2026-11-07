@@ -14,9 +14,19 @@ CHROMA_PATH = Path(__file__).parent.parent / "chroma_db"
 UPLOADS_DIR = Path(__file__).parent.parent / "uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
+ollama_base_url = (
+    os.getenv("OLLAMA_BASE_URL")
+    or os.getenv("OLLAMA_HOST")
+    or os.getenv("OPENAI_BASE_URL", "http://localhost:11434").replace("/v1", "")
+).rstrip("/")
+
+api_key = os.getenv("OLLAMA_API_KEY")
+client_kwargs = {"headers": {"Authorization": f"Bearer {api_key}"}} if api_key else None
+
 embeddings = OllamaEmbeddings(
-  model="qwen3-embedding:0.6b",
-  base_url=os.getenv("OPENAI_BASE_URL", "http://localhost:11434").replace("/v1", ""),
+  model=os.getenv("OLLAMA_EMBED_MODEL", "qwen3-embedding:0.6b"),
+  base_url=ollama_base_url,
+  client_kwargs=client_kwargs or None,
 )
 
 vector_store = Chroma(

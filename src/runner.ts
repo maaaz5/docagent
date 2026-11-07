@@ -10,8 +10,8 @@ export class SQLiteAgentRunner extends InMemoryAgentRunner {
   connect(request: AgentRunnerConnectRequest): Observable<BaseEvent> {
     const threadId = request.threadId;
     const bucketApiUrl =
-      process.env.NEXT_PUBLIC_BUCKET_API_URL ||
       process.env.BUCKET_API_URL ||
+      process.env.NEXT_PUBLIC_BUCKET_API_URL ||
       "http://localhost:8000";
 
     return from(
