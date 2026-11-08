@@ -52,7 +52,7 @@ Run the entire application with one command:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/docagent.git
+git clone https://github.com/maaaz5/docagent.git
 cd docagent
 
 # 2. Configure environment variables
