@@ -1,284 +1,217 @@
-# DocAgent: Self-Hosted Knowledge Bucket & RAG Agent
+# DocAgent: Self-Hosted Knowledge Bucket and Adaptive RAG
 
-DocAgent is a 100% open-source, self-hosted Adaptive RAG assistant built with Next.js, LangGraph, FastAPI, ChromaDB, and Ollama. It features a document Knowledge Bucket, persistent conversation threads (SQLite), and real-time streaming via CopilotKit.
+DocAgent is a local-first, production-ready Retrieval-Augmented Generation (RAG) system built with Next.js, LangGraph, FastAPI, ChromaDB, SQLite, and Ollama. It features a document Knowledge Bucket, self-reflective answer evaluation, persistent multi-thread history, and dynamic mode switching between strict document grounding and open conversation.
+
+![DocAgent LangGraph Workflow](docs/workflow.png)
 
 ---
 
-## 🐳 Quick Start with Docker (Recommended)
+## What Was Built (Architecture Overview)
 
-Run the entire full-stack app (Next.js frontend + FastAPI & LangGraph backend) in one command:
+This project was built from scratch to demonstrate full-stack AI engineering, agent orchestration, and reliable RAG system design:
+
+1. **Adaptive LangGraph RAG Pipeline**:
+   - **Intent Routing (`route_question`)**: Evaluates incoming queries using Pydantic structured output (`RouteQuery`) to decide between general chat and vector retrieval.
+   - **Vector Retrieval (`retrieve`)**: Queries ChromaDB for the top relevant document chunks using local embeddings.
+   - **Document Relevance Grading (`grade_documents`)**: Uses structured output (`DocumentRelevance`) to filter out irrelevant chunks in a single pass before passing context to the generator.
+   - **Iterative Query Rewriting (`rewrite_query`)**: Rewrites the question to improve semantic match if retrieved chunks are irrelevant (bounded to 2 retries).
+   - **Answer Synthesis (`generate`)**: Synthesizes grounded answers citing sources inline `[Source: filename (chunk X)]`.
+   - **Self-Reflective Answer Grading (`grade_answer`)**: Verifies whether the generated answer is grounded in facts (hallucination detection) and directly addresses the user's question before returning.
+
+2. **Pydantic Structured Output**:
+   - Uses LangChain's `.with_structured_output(..., method="json_mode")` across all routing and grading nodes.
+   - Strictly enforces JSON schemas with open-source models, preventing parsing failures in LangSmith traces.
+
+3. **Hybrid Inference Engine**:
+   - **Chat / Reasoning**: Supports cloud-hosted models (`gemma4:31b` via Ollama Cloud) or local models (`qwen3:1.7b`).
+   - **Embeddings**: Uses local embeddings (`qwen3-embedding:0.6b` on `localhost:11434`) for high-throughput, private vector search with zero cloud dependencies.
+
+4. **Document Knowledge Bucket**:
+   - FastAPI endpoints (`/api/bucket`, `/api/bucket/upload`, `/api/bucket/{filename}`) for uploading, chunking, and embedding PDFs, Markdown, and plain text.
+   - Real-time client UI with direct text pasting, file drag-and-drop, and document deletion.
+
+5. **SQLite Persistence and Custom AG-UI Hydration**:
+   - Replaced ephemeral memory with an SQLite persistence layer (`threads` and `messages` tables).
+   - Implemented a custom `SQLiteAgentRunner` extending CopilotKit's runtime to replay full chat history (`RUN_STARTED`, `MESSAGES_SNAPSHOT`, `RUN_FINISHED`) when switching threads.
+
+6. **Strict Document Mode vs. General Chat Toggle**:
+   - UI toggle backed by SQLite settings table (`/api/settings`).
+   - **General Chat (Default)**: Normal routing between conversation and document retrieval.
+   - **Strict Mode**: Bypasses general chat completely, forcing vector retrieval. If documents do not contain the answer, it returns a verified fallback message instead of hallucinating.
+
+7. **Containerization**:
+   - Multi-stage Next.js standalone runner (`Dockerfile`).
+   - Python 3.12 backend container with Astral `uv` (`agent/Dockerfile`).
+   - Docker Compose orchestrating both services with volume mounts for database persistence and `host-gateway` networking for host Ollama access.
+
+---
+
+## Quick Start with Docker (Recommended)
+
+Run the entire application with one command:
 
 ```bash
 # 1. Clone the repository
-git clone <your-repo-url>
+git clone https://github.com/your-username/docagent.git
 cd docagent
 
-# 2. (Optional) Configure environment
+# 2. Configure environment variables
 cp .env.example .env
 
-# 3. Start everything with Docker Compose
+# 3. Pull required Ollama models on your host machine
+ollama pull qwen3-embedding:0.6b
+ollama pull qwen3:1.7b
+
+# 4. Start all services
 docker compose up -d
 ```
 
-The services will be available at:
-- **Web UI:** [http://localhost:3000](http://localhost:3000)
-- **Knowledge Bucket & Threads API:** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **LangGraph Agent:** [http://localhost:8123](http://localhost:8123)
+The application will be available at:
+- Web Application: http://localhost:3000
+- Knowledge Bucket and Threads API: http://localhost:8000/docs
+- LangGraph Agent: http://localhost:8123
 
-ChromaDB (`agent/chroma_db`) and conversation threads (`agent/threads.db`) persist automatically to your host directory.
+ChromaDB (`agent/chroma_db`) and SQLite conversation history (`agent/threads.db`) persist automatically to your host filesystem.
 
 ---
 
-## 💻 Local Development Without Docker
+## Local Development (Without Docker)
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - Python 3.12+
-- [uv](https://docs.astral.sh/uv/) (Python package manager)
-- Any of the following package managers:
-  - npm (default)
-  - [pnpm](https://pnpm.io/installation)
-  - [yarn](https://classic.yarnpkg.com/lang/en/docs/install/)
-  - [bun](https://bun.sh/)
-- OpenAI API Key (for the LangGraph agent)
+- [uv](https://docs.astral.sh/uv/) (Fast Python package manager)
+- [Ollama](https://ollama.com/) running locally
 
-## Getting Started
+### Installation
 
-1. Install dependencies using your preferred package manager:
+1. Install frontend and backend dependencies:
 
 ```bash
-# Using npm (default)
-npm install
+# Install frontend dependencies
+npm install --ignore-scripts
 
-# Using pnpm
-pnpm install
-
-# Using yarn
-yarn install
-
-# Using bun
-bun install
+# Install backend dependencies via uv
+cd agent
+uv sync
+cd ..
 ```
 
-This will also install the Python agent dependencies via `uv sync`.
-
-2. Set up your environment variables:
+2. Configure environment:
 
 ```bash
 cp .env.example .env
 ```
 
-Then edit the `.env` file and add your OpenAI API key:
+3. Ensure local models are pulled in Ollama:
 
 ```bash
-OPENAI_API_KEY=your-openai-api-key-here
+ollama pull qwen3-embedding:0.6b
+ollama pull qwen3:1.7b
 ```
 
-3. Start the development server:
+4. Start the development servers:
 
 ```bash
-# Using npm (default)
 npm run dev
-
-# Using pnpm
-pnpm dev
-
-# Using yarn
-yarn dev
-
-# Using bun
-bun run dev
 ```
 
-This will start both the UI and agent servers concurrently.
+This concurrently starts:
+- Next.js frontend on port 3000
+- LangGraph agent on port 8123
+- FastAPI Bucket API on port 8000
 
-## Running a Channel
+---
 
-`channel-host.mts` mounts the same agent as an Intelligence Channel
-(Slack, Teams). It requires `CPK_INTELLIGENCE_API_KEY` and a declared Channel in
-`.copilotkit/channels.json` — set both up with `copilotkit init` or
-`copilotkit channels add`, which write that file and the credentials your
-`.env` needs, then:
+## Configuration
 
-```bash
-npm run channel
+Settings in `.env`:
+
+```env
+AGENT_URL=http://localhost:8123
+NEXT_PUBLIC_BUCKET_API_URL=http://localhost:8000
+
+# Ollama Mode Selection: "cloud" or "local"
+OLLAMA_CHAT_MODE=cloud
+OLLAMA_EMBED_MODE=local
+
+# Cloud Ollama Settings (Chat / Reasoning)
+OLLAMA_CLOUD_URL=https://ollama.com
+OLLAMA_CLOUD_API_KEY=your-api-key-here
+OLLAMA_CLOUD_MODEL=gemma4:31b
+
+# Local Ollama Settings (Embeddings / Local Chat)
+OLLAMA_LOCAL_URL=http://localhost:11434
+OLLAMA_LOCAL_EMBED_MODEL=qwen3-embedding:0.6b
+OLLAMA_LOCAL_MODEL=qwen3:1.7b
+
+# Optional: LangSmith Tracing
+LANGSMITH_TRACING=true
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+LANGSMITH_API_KEY=your-langsmith-key
+LANGSMITH_PROJECT=docagent
 ```
 
-The host reads which Channel to hold from `.copilotkit/channels.json`. If a
-project declares more than one, set `INTELLIGENCE_CHANNEL_NAME` to pick one.
-
-The host holds no provider credentials and exposes no provider endpoint —
-Intelligence owns the provider edge — so the same file works for every provider.
-
-The Channel itself is declared in `channels.mts` — that is where to add commands,
-reactions, or an `onMention` handler. `channel-host.mts` only owns the process
-lifetime, and is byte-identical in every starter.
-
-Once startup finishes, the log reports the truth per Channel rather than a
-blanket success:
-
-- `Channel "<name>" is online.` — the session is up and can send.
-- `Channel "<name>" is declared but no provider is attached yet.` —
-  a normal waiting state, not a failure. Run `copilotkit channels status` to
-  see what setup remains (e.g. finishing a Slack app install).
-
-Either message means the runtime activated and the gateway accepted the
-Channel. Neither one proves the provider app is installed, that it has been
-invited to a channel, or that anyone can message it — verify those separately
-(invite the bot, then message it) before treating the Channel as working.
-
-## Available Scripts
-
-The following scripts can also be run using your preferred package manager:
-
-- `dev` - Starts both UI and agent servers in development mode
-- `dev:debug` - Starts development servers with debug logging enabled
-- `dev:ui` - Starts only the Next.js UI server
-- `dev:agent` - Starts only the LangGraph agent server
-- `build` - Builds the Next.js application for production
-- `start` - Starts the production server
-- `install:agent` - Installs Python dependencies for the agent
-- `channel` - Holds an Intelligence Channel open (see "Running a Channel" above)
-- `typecheck:channel` - Type-checks the channel host on its own `tsconfig.channel.json`
+---
 
 ## Project Structure
 
 ```
-├── src/                         # Next.js frontend source
-│   ├── app/
-│   │   ├── page.tsx             # Main page
-│   │   └── api/copilotkit/      # CopilotKit API route
+docagent/
+├── agent/                      # Python backend service
+│   ├── src/
+│   │   ├── nodes/              # LangGraph workflow nodes
+│   │   │   ├── retrieve.py     # Vector store retrieval
+│   │   │   ├── grade_documents.py # Pydantic document grading
+│   │   │   ├── generate.py     # Grounded answer synthesis
+│   │   │   ├── grade_answer.py # Hallucination & relevance check
+│   │   │   ├── rewrite_query.py # Query optimization
+│   │   │   └── direct_chat.py  # Conversational fallback
+│   │   ├── db.py               # SQLite persistence (threads, messages, settings)
+│   │   ├── edges.py            # Graph routing logic (RouteQuery)
+│   │   ├── model.py            # Ollama model and embeddings factory
+│   │   ├── rag.py              # ChromaDB vector store and chunking
+│   │   └── state.py            # GraphState definition
+│   ├── bucket_api.py           # FastAPI server (Bucket, Threads, Settings)
+│   ├── main.py                 # LangGraph state machine definition
+│   ├── serve.py                # Standalone AG-UI server for Docker
+│   ├── Dockerfile              # Backend container definition
+│   └── tests/                  # Unit and integration test suite
+├── src/                        # Next.js frontend application
+│   ├── app/                    # App router and CopilotKit API route
 │   ├── components/
-│   │   ├── example-canvas/      # Todo list UI
-│   │   ├── example-layout/      # Layout: chat + canvas side-by-side
-│   │   └── generative-ui/       # Example generative UI components
-│   └── hooks/
-├── agent/                       # LangGraph Python agent
-│   ├── main.py                  # Agent entry point
-│   └── src/
-│       ├── todos.py             # Todo tools and state schema
-│       └── query.py             # Example data query tool
-├── scripts/                     # Agent setup and run scripts
-│   ├── setup-agent.sh / .bat
-│   └── run-agent.sh / .bat
-├── public/                      # Static assets
-├── next.config.ts
-├── tsconfig.json
-└── package.json
+│   │   ├── chat-mode-toggle.tsx # Strict Mode / General Chat toggle
+│   │   ├── knowledge-bucket/   # Document ingestion and vector status UI
+│   │   └── threads-sidebar/    # SQLite conversation sidebar
+│   └── runner.ts               # Custom SQLiteAgentRunner for AG-UI hydration
+├── docs/
+│   └── workflow.png            # Compiled LangGraph workflow diagram
+├── docker-compose.yml          # Container orchestration
+├── Dockerfile                  # Next.js standalone container
+└── LICENSE                     # MIT License
 ```
 
-## A2UI — Agent-to-User Interface
+---
 
-This starter includes [A2UI](https://a2ui.org/specification/) support, allowing the agent to generate rich, interactive UI surfaces declaratively. Instead of returning plain text, the agent sends a JSON description of the UI it wants to render, and the frontend turns it into real components.
+## Running Tests
 
-### How it works
+Run the backend unit test suite:
 
-A2UI uses three concepts:
+```bash
+cd agent
+uv run pytest -m "not integration"
+```
 
-1. **Catalog** — a set of component definitions (schema) paired with React renderers. Registered once in `layout.tsx` via `<CopilotKitProvider a2ui={{ catalog: demonstrationCatalog }}>`.
-2. **Surface** — a rendered UI instance. The agent creates a surface, sets its components, and binds data to it.
-3. **Operations** — the agent returns `a2ui.render(operations=[...])` from a tool, which the middleware streams to the frontend.
+To run full integration tests against active Ollama models:
 
-### Two patterns
+```bash
+cd agent
+uv run pytest
+```
 
-| Pattern            | Description                                                                   | Agent tool       | Frontend                                    |
-| ------------------ | ----------------------------------------------------------------------------- | ---------------- | ------------------------------------------- |
-| **Fixed schema**   | Pre-defined component layout. Only the data changes per invocation.           | `search_flights` | Schema in `a2ui/schemas/flight_schema.json` |
-| **Dynamic schema** | A secondary LLM generates both components and data based on the conversation. | `generate_a2ui`  | Components decided at runtime               |
-
-Both patterns use the same catalog on the frontend — the difference is where the component tree comes from.
-
-### Key files
-
-| Purpose                              | Path                                               |
-| ------------------------------------ | -------------------------------------------------- |
-| Catalog definitions (Zod schemas)    | `src/app/declarative-generative-ui/definitions.ts` |
-| Catalog renderers (React components) | `src/app/declarative-generative-ui/renderers.tsx`  |
-| Catalog registration                 | `src/app/layout.tsx`                               |
-| Fixed-schema agent tool              | `agent/src/a2ui_fixed_schema.py`                   |
-| Dynamic-schema agent tool            | `agent/src/a2ui_dynamic_schema.py`                 |
-| Flight schema JSON                   | `agent/src/a2ui/schemas/flight_schema.json`        |
-| Showcase config                      | `showcase.json`                                    |
-
-### Adding a custom component
-
-1. **Define** the component schema in `definitions.ts`:
-
-   ```typescript
-   MyWidget: {
-     description: "A brief description for the agent.",
-     props: z.object({ title: z.string(), value: z.number() }),
-   },
-   ```
-
-2. **Render** it in `renderers.tsx`:
-
-   ```typescript
-   MyWidget: ({ props }) => (
-     <div>{props.title}: {props.value}</div>
-   ),
-   ```
-
-   Renderers are type-checked against the definitions — TypeScript will error if props don't match.
-
-3. **Use it** from the agent. The component is automatically available to both fixed-schema templates and the dynamic-schema LLM.
-
-### Adding a new fixed-schema tool
-
-1. Create a JSON schema file in `agent/src/a2ui/schemas/` describing the component tree.
-2. Create a Python tool that loads the schema with `a2ui.load_schema()` and returns `a2ui.render(operations=[...])` with your data. See `a2ui_fixed_schema.py` for the pattern.
-
-### Showcase mode
-
-`showcase.json` controls which suggestion pills are visually highlighted. Set `"showcase": "a2ui"` to highlight the A2UI demos, or `"showcase": "default"` for no highlights. This is configured automatically when scaffolding via `npx copilotkit create --framework a2ui`.
-
-### Further reading
-
-- [A2UI Specification](https://a2ui.org/specification/)
-- [CopilotKit A2UI Documentation](https://docs.copilotkit.ai)
-
-## Documentation
-
-- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/) - Learn more about LangGraph and its features
-- [CopilotKit Documentation](https://docs.copilotkit.ai) - Explore CopilotKit's capabilities
-
-## Contributing
-
-Feel free to submit issues and enhancement requests! This starter is designed to be easily extensible.
+---
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Troubleshooting
-
-### Agent Connection Issues
-
-If you see "I'm having trouble connecting to my tools", make sure:
-
-1. The LangGraph agent is running on port 8123
-2. Your OpenAI API key is set correctly
-3. Both servers started successfully
-
-### Python Dependencies
-
-If you encounter Python import errors:
-
-```bash
-npm run install:agent
-```
-
-## CopilotKit Intelligence
-
-This app is connected to the CopilotKit Intelligence project **docagent**
-(recorded in `.copilotkit/project.json`). Intelligence adds durable threads,
-message & event persistence, and analytics for your agent.
-
-- **Runtime credential:** a project-scoped key is stored as
-  `CPK_INTELLIGENCE_API_KEY` in your `.env`.
-- **Switch project:** run `copilotkit project select` from this directory.
-- **Run it:** follow "Getting Started" above — install dependencies, set your
-  keys in `.env`, then `npm run dev`.
-
-Learn more at https://docs.copilotkit.ai.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
