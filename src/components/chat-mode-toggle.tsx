@@ -56,7 +56,7 @@ export function ChatModeToggle() {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="absolute bottom-12 right-12 z-50">
       <button
         onClick={toggleMode}
         type="button"
@@ -65,11 +65,10 @@ export function ChatModeToggle() {
             ? "General Chat is enabled: Assistant can converse and search documents."
             : "Strict Document Mode: Assistant ONLY answers using Knowledge Bucket documents."
         }
-        className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all shadow-xs cursor-pointer select-none ${
-          allowGeneralChat
-            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15"
-            : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15"
-        }`}
+        className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all shadow-xs cursor-pointer select-none ${allowGeneralChat
+          ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15"
+          : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15"
+          }`}
       >
         {/* Status Dot */}
         <span className="relative flex h-2 w-2">

@@ -30,7 +30,6 @@ def route_question(state: GraphState) -> str:
 
   messages = state.get("messages", [])
 
-  # 1. ALWAYS extract the latest user message from chat history
   question = ""
   for msg in reversed(messages):
     if isinstance(msg, HumanMessage) or getattr(msg, "type", "") == "human":
@@ -39,10 +38,9 @@ def route_question(state: GraphState) -> str:
 
   question = question or ""
 
-  # 2. Extract conversation history BEFORE the current question
   history_context = ""
   if len(messages) > 1:
-    previous_msgs = messages[:-1][-4:]  # Last 4 messages prior to the current question
+    previous_msgs = messages[:-1][-4:] 
     history_lines = []
     for m in previous_msgs:
       role = "User" if (isinstance(m, HumanMessage) or getattr(m, "type", "") == "human") else "Assistant"
@@ -55,7 +53,7 @@ def route_question(state: GraphState) -> str:
   print(f"--- [ROUTER] Classifying intent with LLM for: '{question}' ---")
 
   model = get_model(temperature=0.0)
-  router = model.with_structured_output(RouteQuery)
+  router = model.with_structured_output(RouteQuery, method="json_mode")
 
   prompt = f"""You are an expert router deciding whether to search documents or continue in direct conversation.
 
@@ -63,8 +61,11 @@ def route_question(state: GraphState) -> str:
 {question}
 
 Instructions:
-- Route to 'vectorstore' ONLY if the user is asking to lookup or retrieve specific NEW information/facts from uploaded files that are not already in the conversation history.
-- Route to 'general_chat' if the user is asking a follow-up question, seeking an opinion/analysis/evaluation of what was ALREADY stated in the conversation history, or engaging in conversation."""
+- Route to 'vectorstore' if the user is asking to search or look up information/facts from uploaded documents.
+- Route to 'general_chat' for greetings, gratitude, chit-chat, or conversational follow-up questions.
+
+Respond strictly in JSON matching this schema:
+{{"datasource": "vectorstore"}} OR {{"datasource": "general_chat"}}"""
 
   try:
     decision = router.invoke(prompt)
@@ -76,8 +77,7 @@ Instructions:
     else:
       dest = "vectorstore"
 
-  print(f"--- [ROUTER] Recovered routing to '{dest}' ---")
-
+  print(f"--- [ROUTER] Routing decision: '{dest}' ---")
   return dest
 
 

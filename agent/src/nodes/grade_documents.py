@@ -1,17 +1,19 @@
+import re
 from typing import List
 from pydantic import BaseModel, Field
+from langchain_core.messages import HumanMessage
 from src.state import GraphState
 from src.model import get_model
 
 class DocumentRelevance(BaseModel):
   """Indices of documents that are relevant to the user query."""
   relevant_indices: List[int] = Field(
-    description="List of 1-based indices of documents relevant to the question, e.g. [1, 3]. Empty if none are relevant."
+    description="List of 1-based indices of documents relevant to the question, e.g. [1, 3]."
   )
 
 def grade_documents_node(state: GraphState):
   """
-  Grades ALL retrieved document chunks in a SINGLE LLM call.
+  Grades ALL retrieved document chunks in a SINGLE LLM call without brittle JSON parsing.
   """
   question = state["question"]
   documents = state.get("documents", [])
@@ -27,16 +29,18 @@ def grade_documents_node(state: GraphState):
   )
 
   prompt = f"""You are an expert document grader.
-    Review the following retrieved documents and identify which ones contain information relevant to the user's question.
-    Question:
-    {question}
-    Documents:
-    {formatted_docs}
-    Return only the 1-based indices of the documents that are relevant (e.g. [1, 2]). If none are relevant, return an empty list [].
-    """
+Review the following retrieved documents and identify which ones contain information relevant to the user's question.
+Question:
+{question}
+
+Documents:
+{formatted_docs}
+
+Respond strictly in JSON matching this schema:
+{{"relevant_indices": [1]}} (or list of indices, e.g. [1, 2], [] if none)"""
   
   model = get_model(temperature=0.0)
-  grader = model.with_structured_output(DocumentRelevance)
+  grader = model.with_structured_output(DocumentRelevance, method="json_mode")
 
   try:
     result = grader.invoke(prompt)
