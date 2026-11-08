@@ -9,12 +9,17 @@ services:
       - "8000:8000"
       - "8123:8123"
     environment:
-      # Connect to host's Ollama instance by default (or Ollama Cloud if set in .env)
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://host.docker.internal:11434/v1}
-      - COPILOTKIT_AGENT_MODEL=${COPILOTKIT_AGENT_MODEL:-qwen3:1.7b}
-      - OLLAMA_EMBED_MODEL=${OLLAMA_EMBED_MODEL:-qwen3-embedding:0.6b}
-      - OLLAMA_API_KEY=${OLLAMA_API_KEY:-}
+      # Hybrid Configuration: Cloud Chat + Local Embeddings
+      - OLLAMA_CHAT_MODE=${OLLAMA_CHAT_MODE:-cloud}
+      - OLLAMA_EMBED_MODE=${OLLAMA_EMBED_MODE:-local}
+      # Cloud / Remote Ollama Settings (used for Chat with gemma4:31b)
+      - OLLAMA_CLOUD_URL=${OLLAMA_CLOUD_URL:-https://ollama.com}
+      - OLLAMA_CLOUD_API_KEY=${OLLAMA_CLOUD_API_KEY:-}
+      - OLLAMA_CLOUD_MODEL=${OLLAMA_CLOUD_MODEL:-gemma4:31b}
+      # Local Ollama Settings (used for Embeddings & ChromaDB vector search)
+      - OLLAMA_LOCAL_URL=${OLLAMA_LOCAL_URL:-http://host.docker.internal:11434}
+      - OLLAMA_LOCAL_EMBED_MODEL=${OLLAMA_LOCAL_EMBED_MODEL:-qwen3-embedding:0.6b}
+      - OLLAMA_LOCAL_MODEL=${OLLAMA_LOCAL_MODEL:-qwen3:1.7b}
       # LangSmith Tracing (optional)
       - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
       - LANGSMITH_ENDPOINT=${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}

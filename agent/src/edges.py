@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from langchain_core.messages import HumanMessage
 from src.state import GraphState
 from src.model import get_model
+from src.db import get_setting
 
 
 class RouteQuery(BaseModel):
@@ -17,7 +18,16 @@ class RouteQuery(BaseModel):
 def route_question(state: GraphState) -> str:
   """
   Determines whether to route the question to Chroma retrieval or direct chat using the LLM.
+  If allow_general_chat is False (Strict Document Mode), strictly forces 'vectorstore'.
   """
+  allow_chat = state.get("allow_general_chat")
+  if allow_chat is None:
+    allow_chat = get_setting("allow_general_chat", default=True)
+
+  if not allow_chat:
+    print("--- [ROUTER] General chat is DISABLED (Strict Mode) -> Forcing 'vectorstore' ---")
+    return "vectorstore"
+
   messages = state.get("messages", [])
 
   # 1. ALWAYS extract the latest user message from chat history

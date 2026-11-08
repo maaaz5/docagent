@@ -14,19 +14,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <title>CopilotKit</title>
-        <link
-          rel="icon"
-          type="image/svg+xml"
-          href="/copilotkit-logo-mark.svg"
-        />
-        {/*
-          Set the theme class BEFORE first paint to avoid a white→dark flash.
-          ThemeProvider applies the theme in a useEffect (post-hydration), so
-          without this the page paints unthemed (light) first, then flips. This
-          blocking inline script matches ThemeProvider's "system" default so
-          there's no flash and no class mismatch when the provider re-applies.
-        */}
+        <title>DocAgent</title>
+
+
         <script
           dangerouslySetInnerHTML={{
             __html:

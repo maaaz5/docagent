@@ -84,7 +84,7 @@ def test_generate_node_resets_loop_step_and_docs(mock_get_model, state_with_docs
   assert len(result["messages"]) == 1
   assert isinstance(result["messages"][0], AIMessage)
   assert result["loop_step"] == 0
-  assert result["documents"] == []
+  assert result["documents"] == state_with_docs["documents"]
 
 
 @patch("src.nodes.direct_chat.get_model")

@@ -13,6 +13,8 @@ from src.db import (
     delete_thread as db_delete_thread,
     get_messages as db_get_messages,
     add_message as db_add_message,
+    get_setting,
+    set_setting,
 )
 
 from src.rag import index_file, list_documents, delete_document
@@ -41,6 +43,9 @@ class ThreadCreate(BaseModel):
 class MessageCreate(BaseModel):
   role: str
   content: str
+
+class SettingsUpdate(BaseModel):
+  allow_general_chat: bool
 
 
 UPLOADS_DIR = Path(__file__).parent / "uploads"
@@ -110,6 +115,15 @@ async def get_messages(thread_id: str):
 @app.post("/api/threads/{thread_id}/messages")
 async def append_message(thread_id: str, payload: MessageCreate):
   return db_add_message(thread_id, payload.role, payload.content)
+
+@app.get("/api/settings")
+async def get_app_settings():
+  return {"allow_general_chat": get_setting("allow_general_chat", default=True)}
+
+@app.post("/api/settings")
+async def update_app_settings(payload: SettingsUpdate):
+  set_setting("allow_general_chat", payload.allow_general_chat)
+  return {"success": True, "allow_general_chat": payload.allow_general_chat}
 
       
 if __name__ == "__main__":

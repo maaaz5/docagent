@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from copilotkit.langgraph import CopilotKitState
 
 class GraphState(CopilotKitState):
@@ -10,3 +10,4 @@ class GraphState(CopilotKitState):
   documents: List[str]
   generation: str
   loop_step: int
+  allow_general_chat: Optional[bool]

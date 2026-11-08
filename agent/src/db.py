@@ -1,4 +1,5 @@
 import sqlite3
+import json
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any
@@ -7,7 +8,7 @@ DB_PATH = Path(__file__).resolve().parent.parent / "threads.db"
 
 
 def init_db():
-  """Initialize SQLite tables for threads and conversation messages."""
+  """Initialize SQLite tables for threads, messages, and app settings."""
   with sqlite3.connect(DB_PATH) as conn:
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.execute("""
@@ -28,10 +29,40 @@ def init_db():
             FOREIGN KEY (thread_id) REFERENCES threads(id) ON DELETE CASCADE
         );
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+    """)
     conn.commit()
 
 
 init_db()
+
+
+def get_setting(key: str, default: Any = None) -> Any:
+  """Retrieve a setting value from SQLite, parsed as JSON if applicable."""
+  with sqlite3.connect(DB_PATH) as conn:
+    cursor = conn.execute("SELECT value FROM settings WHERE key = ?", (key,))
+    row = cursor.fetchone()
+    if row:
+      try:
+        return json.loads(row[0])
+      except Exception:
+        return row[0]
+    return default
+
+
+def set_setting(key: str, value: Any):
+  """Save a setting key-value pair to SQLite."""
+  val_str = json.dumps(value)
+  with sqlite3.connect(DB_PATH) as conn:
+    conn.execute(
+        "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        (key, val_str),
+    )
+    conn.commit()
 
 
 def list_threads() -> List[Dict[str, Any]]:

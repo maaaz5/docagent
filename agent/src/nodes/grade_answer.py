@@ -59,6 +59,11 @@ def grade_generation_node(state: GraphState):
 
   loop_step = state.get("loop_step", 0)
 
+  # If generation is a direct strict-mode fallback message, finish immediately
+  if "could not find any relevant information in the uploaded documents" in generation.lower():
+    print("--- [DECISION] Strict Mode no-docs answer -> END ---")
+    return "useful"
+
   if is_grounded and addresses_question:
     print("--- [DECISION] Grounded and addresses question -> END ---")
     return "useful"
